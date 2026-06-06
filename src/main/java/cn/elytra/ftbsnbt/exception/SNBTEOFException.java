@@ -10,6 +10,6 @@ package cn.elytra.ftbsnbt.exception;
 
 public class SNBTEOFException extends SNBTException {
     public SNBTEOFException() {
-        super("EOF");
+        super("Unexpected end of file");
     }
 }

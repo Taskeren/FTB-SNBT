@@ -8,7 +8,7 @@
 
 package cn.elytra.ftbsnbt.exception;
 
-public class SNBTException extends RuntimeException {
+public class SNBTException extends IllegalStateException {
     public SNBTException() {
     }
 

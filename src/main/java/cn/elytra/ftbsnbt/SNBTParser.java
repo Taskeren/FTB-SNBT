@@ -19,7 +19,9 @@ import org.glavo.nbt.tag.*;
 import java.util.ArrayList;
 import java.util.List;
 
-class SNBTParser {
+import static cn.elytra.ftbsnbt.SpecialTags.*;
+
+final class SNBTParser {
 
     public static final char[] ESCAPE_CHARS = Util.make(new char[128], array -> {
         array['"'] = '\"';
@@ -110,6 +112,7 @@ class SNBTParser {
         }
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     private Tag readTag(char first) {
         return switch (first) {
             case '{' -> readCompound();
@@ -118,15 +121,15 @@ class SNBTParser {
             default -> {
                 String s = readWordString(first);
                 yield switch (s) {
-                    case "true" -> new ByteTag((byte) 1);
-                    case "false" -> new ByteTag((byte) 0);
-                    case "null", "end", "END" -> SNBT.NULL_TAG;
-                    case "Infinity", "Infinityd", "+Infinity", "+Infinityd", "∞", "∞d", "+∞", "+∞d" -> SNBT.POS_INFINITE_TAG;
-                    case "-Infinity", "-Infinityd", "-∞", "-∞d" -> SNBT.NEG_INFINITE_TAG;
-                    case "NaN", "NaNd" -> SNBT.NAN_TAG;
-                    case "Infinityf", "+Infinityf", "∞f", "+∞f" -> SNBT.POS_INFINITE_FLOAT_TAG;
-                    case "-Infinityf", "-∞f" -> SNBT.NEG_INFINITE_FLOAT_TAG;
-                    case "NaNf" -> SNBT.NAN_FLOAT_TAG;
+                    case "true" -> TRUE.clone();
+                    case "false" -> FALSE.clone();
+                    case "null", "end", "END" -> NULL_TAG.clone();
+                    case "Infinity", "Infinityd", "+Infinity", "+Infinityd", "∞", "∞d", "+∞", "+∞d" -> POS_INFINITE_TAG.clone();
+                    case "-Infinity", "-Infinityd", "-∞", "-∞d" -> NEG_INFINITE_TAG.clone();
+                    case "NaN", "NaNd" -> NAN_TAG.clone();
+                    case "Infinityf", "+Infinityf", "∞f", "+∞f" -> POS_INFINITE_FLOAT_TAG.clone();
+                    case "-Infinityf", "-∞f" -> NEG_INFINITE_FLOAT_TAG.clone();
+                    case "NaNf" -> NAN_FLOAT_TAG.clone();
                     default -> {
                         char last = Character.toLowerCase(s.charAt(s.length() - 1));
                         TagType<? extends Tag> type = getNumberType(s, last);
@@ -149,7 +152,8 @@ class SNBTParser {
                         } else if (type == TagType.STRING) {
                             yield new StringTag(s);
                         } else {
-                            throw new SNBTSyntaxException("");
+                            // probably unreachable
+                            throw new SNBTSyntaxException("Unexpected tag type: " + type.name() + " @ " + posString());
                         }
                     }
                 };
