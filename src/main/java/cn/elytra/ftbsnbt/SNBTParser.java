@@ -15,6 +15,7 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.glavo.nbt.tag.*;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,15 @@ final class SNBTParser {
     private final char[] buffer;
     private int position;
 
-    public SNBTParser(List<String> lines) {
+    /**
+     * The special tag instance, used as a mark of null tags ({@code null}, {@code end}, {@code END}).
+     * If it's {@code null}, the parser will throw an exception when consuming nulls.
+     */
+    private final @Nullable Tag nullTag;
+
+    public SNBTParser(List<String> lines, @Nullable Tag nullTag) {
+        this.nullTag = nullTag;
+
         StringBuilder bufferBuilder = new StringBuilder();
 
         for (String line : lines) {
@@ -65,7 +74,11 @@ final class SNBTParser {
     }
 
     static CompoundTag read(List<String> lines) {
-        SNBTParser p = new SNBTParser(lines);
+        return read(lines, null);
+    }
+
+    static CompoundTag read(List<String> lines, @Nullable Tag nullTag) {
+        SNBTParser p = new SNBTParser(lines, nullTag);
         return (CompoundTag) p.readTag(p.nextNS());
     }
 
@@ -123,8 +136,9 @@ final class SNBTParser {
                 yield switch (s) {
                     case "true" -> TRUE.clone();
                     case "false" -> FALSE.clone();
-                    case "null", "end", "END" -> NULL_TAG.clone();
-                    case "Infinity", "Infinityd", "+Infinity", "+Infinityd", "∞", "∞d", "+∞", "+∞d" -> POS_INFINITE_TAG.clone();
+                    case "null", "end", "END" -> getNullTag();
+                    case "Infinity", "Infinityd", "+Infinity", "+Infinityd", "∞", "∞d", "+∞", "+∞d" ->
+                            POS_INFINITE_TAG.clone();
                     case "-Infinity", "-Infinityd", "-∞", "-∞d" -> NEG_INFINITE_TAG.clone();
                     case "NaN", "NaNd" -> NAN_TAG.clone();
                     case "Infinityf", "+Infinityf", "∞f", "+∞f" -> POS_INFINITE_FLOAT_TAG.clone();
@@ -295,6 +309,11 @@ final class SNBTParser {
                 sb.append(c);
             }
         }
+    }
+
+    private Tag getNullTag() {
+        if (nullTag != null) return nullTag;
+        else throw new SNBTSyntaxException("Unexpected null tag @ " + posString());
     }
 
     private static boolean isSimpleCharacter(char c) {

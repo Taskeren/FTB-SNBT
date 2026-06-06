@@ -9,6 +9,7 @@
 package cn.elytra.ftbsnbt;
 
 import org.glavo.nbt.tag.CompoundTag;
+import org.glavo.nbt.tag.Tag;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +27,15 @@ public final class SNBT {
         return SNBTParser.read(lines);
     }
 
+    public static CompoundTag readLines(List<String> lines, Tag nullTag) {
+        return SNBTParser.read(lines, nullTag);
+    }
+
     public static CompoundTag tryRead(Path path) throws IOException {
         return readLines(Files.readAllLines(path, StandardCharsets.UTF_8));
+    }
+
+    public static CompoundTag tryRead(Path path, Tag nullTag) throws IOException {
+        return readLines(Files.readAllLines(path, StandardCharsets.UTF_8), nullTag);
     }
 }

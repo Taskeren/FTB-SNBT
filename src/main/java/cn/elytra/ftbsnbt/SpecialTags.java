@@ -15,7 +15,6 @@ import org.glavo.nbt.tag.FloatTag;
 final class SpecialTags {
     static final ByteTag TRUE = new ByteTag((byte) 1);
     static final ByteTag FALSE = new ByteTag((byte) 0);
-    static final ByteTag NULL_TAG = new ByteTag((byte) 0);
     static final DoubleTag POS_INFINITE_TAG = new DoubleTag(Double.POSITIVE_INFINITY);
     static final DoubleTag NEG_INFINITE_TAG = new DoubleTag(Double.NEGATIVE_INFINITY);
     static final DoubleTag NAN_TAG = new DoubleTag(Double.NaN);
