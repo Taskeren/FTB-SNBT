@@ -1,7 +1,7 @@
 import groovy.lang.Closure
 
 plugins {
-    java
+    `java-library`
     `maven-publish`
     id("com.palantir.git-version") version "5.0.0"
 }
@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.glavo:HelloNBT:0.3.0")
+    api("org.glavo:HelloNBT:0.3.0")
     implementation("com.google.guava:guava:33.6.0-jre")
     implementation("org.jspecify:jspecify:1.0.0")
 
