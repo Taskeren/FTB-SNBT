@@ -12,7 +12,10 @@ version = "1.0-SNAPSHOT"
 val gitVersion: Closure<String> by extra
 
 try {
-    version = gitVersion()
+    // don't override the version tag
+    if (!hasProperty("version")) {
+        version = gitVersion()
+    }
 } catch (e: Exception) {
     println("Failed to get git version")
     e.printStackTrace()
