@@ -12,6 +12,11 @@ dependencies {
     implementation("org.jspecify:jspecify:1.0.0")
 }
 
+tasks.withType<JavaCompile> {
+    options.release.set(17)
+    options.javaModuleVersion.set(project.version.toString())
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
