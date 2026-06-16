@@ -6,25 +6,22 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package cn.elytra.ftbsnbt;
+package cn.elytra.ftbsnbt.internal;
 
+import cn.elytra.ftbsnbt.NBTAdaptor;
 import cn.elytra.ftbsnbt.exception.SNBTEOFException;
 import cn.elytra.ftbsnbt.exception.SNBTSyntaxException;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import org.glavo.nbt.tag.*;
-import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Consumer;
 
-import static cn.elytra.ftbsnbt.SpecialTags.*;
+public final class SNBTParser<Tag> {
 
-final class SNBTParser {
-
-    public static final char[] ESCAPE_CHARS = Util.make(new char[128], array -> {
+    public static final char[] ESCAPE_CHARS = make(new char[128], array -> {
         array['"'] = '\"';
         array['\\'] = '\\';
         array['\t'] = 't';
@@ -33,7 +30,7 @@ final class SNBTParser {
         array['\r'] = 'r';
         array['\f'] = 'f';
     });
-    public static final char[] REVERSE_ESCAPE_CHARS = Util.make(new char[128], array -> {
+    public static final char[] REVERSE_ESCAPE_CHARS = make(new char[128], array -> {
         for (var i = 0; i < array.length; i++) {
             if (ESCAPE_CHARS[i] != 0) {
                 array[ESCAPE_CHARS[i]] = (char) i;
@@ -44,14 +41,10 @@ final class SNBTParser {
     private final char[] buffer;
     private int position;
 
-    /**
-     * The special tag instance, used as a mark of null tags ({@code null}, {@code end}, {@code END}).
-     * If it's {@code null}, the parser will throw an exception when consuming nulls.
-     */
-    private final @Nullable Tag nullTag;
+    private final NBTAdaptor<Tag> adaptor;
 
-    public SNBTParser(List<String> lines, @Nullable Tag nullTag) {
-        this.nullTag = nullTag;
+    public SNBTParser(List<String> lines, NBTAdaptor<Tag> adaptor) {
+        this.adaptor = adaptor;
 
         StringBuilder bufferBuilder = new StringBuilder();
 
@@ -73,13 +66,14 @@ final class SNBTParser {
         this.position = 0;
     }
 
-    static CompoundTag read(List<String> lines) {
-        return read(lines, null);
+    public static <T> T read(List<String> lines, NBTAdaptor<T> adaptor) {
+        SNBTParser<T> p = new SNBTParser<>(lines, adaptor);
+        return p.readTag(p.nextNS());
     }
 
-    static CompoundTag read(List<String> lines, @Nullable Tag nullTag) {
-        SNBTParser p = new SNBTParser(lines, nullTag);
-        return (CompoundTag) p.readTag(p.nextNS());
+    private static <T> T make(T value, Consumer<T> builder) {
+        builder.accept(value);
+        return value;
     }
 
     private String posString() {
@@ -130,41 +124,41 @@ final class SNBTParser {
         return switch (first) {
             case '{' -> readCompound();
             case '[' -> readCollection();
-            case '"', '\'' -> new StringTag(readQuotedString(first));
+            case '"', '\'' -> adaptor.ofString(readQuotedString(first));
             default -> {
                 String s = readWordString(first);
                 yield switch (s) {
-                    case "true" -> TRUE.clone();
-                    case "false" -> FALSE.clone();
-                    case "null", "end", "END" -> getNullTag();
+                    case "true" -> adaptor.ofBoolean(true);
+                    case "false" -> adaptor.ofBoolean(false);
+                    case "null", "end", "END" -> adaptor.ofNull();
                     case "Infinity", "Infinityd", "+Infinity", "+Infinityd", "∞", "∞d", "+∞", "+∞d" ->
-                            POS_INFINITE_TAG.clone();
-                    case "-Infinity", "-Infinityd", "-∞", "-∞d" -> NEG_INFINITE_TAG.clone();
-                    case "NaN", "NaNd" -> NAN_TAG.clone();
-                    case "Infinityf", "+Infinityf", "∞f", "+∞f" -> POS_INFINITE_FLOAT_TAG.clone();
-                    case "-Infinityf", "-∞f" -> NEG_INFINITE_FLOAT_TAG.clone();
-                    case "NaNf" -> NAN_FLOAT_TAG.clone();
+                            adaptor.ofPositiveInfinite();
+                    case "-Infinity", "-Infinityd", "-∞", "-∞d" -> adaptor.ofNegativeInfinite();
+                    case "NaN", "NaNd" -> adaptor.ofNaN();
+                    case "Infinityf", "+Infinityf", "∞f", "+∞f" -> adaptor.ofPositiveInfiniteFloat();
+                    case "-Infinityf", "-∞f" -> adaptor.ofNegativeInfiniteFloat();
+                    case "NaNf" -> adaptor.ofNaNFloat();
                     default -> {
                         char last = Character.toLowerCase(s.charAt(s.length() - 1));
-                        TagType<? extends Tag> type = getNumberType(s, last);
+                        TagType type = getNumberType(s, last);
                         if (type == TagType.BYTE) {
-                            yield new ByteTag(Byte.parseByte(s.substring(0, s.length() - 1)));
+                            yield adaptor.ofByte(Byte.parseByte(s.substring(0, s.length() - 1)));
                         } else if (type == TagType.SHORT) {
-                            yield new ShortTag(Short.parseShort(s.substring(0, s.length() - 1)));
+                            yield adaptor.ofShort(Short.parseShort(s.substring(0, s.length() - 1)));
                         } else if (type == TagType.INT) {
-                            yield new IntTag(Integer.parseInt(s));
+                            yield adaptor.ofInt(Integer.parseInt(s));
                         } else if (type == TagType.LONG) {
-                            yield new LongTag(Long.parseLong(s.substring(0, s.length() - 1)));
+                            yield adaptor.ofLong(Long.parseLong(s.substring(0, s.length() - 1)));
                         } else if (type == TagType.FLOAT) {
-                            yield new FloatTag(Float.parseFloat(s.substring(0, s.length() - 1)));
+                            yield adaptor.ofFloat(Float.parseFloat(s.substring(0, s.length() - 1)));
                         } else if (type == TagType.DOUBLE) {
                             if (last == 'd') {
-                                yield new DoubleTag(Double.parseDouble(s.substring(0, s.length() - 1)));
+                                yield adaptor.ofDouble(Double.parseDouble(s.substring(0, s.length() - 1)));
                             } else {
-                                yield new DoubleTag(Double.parseDouble(s));
+                                yield adaptor.ofDouble(Double.parseDouble(s));
                             }
                         } else if (type == TagType.STRING) {
-                            yield new StringTag(s);
+                            yield adaptor.ofString(s);
                         } else {
                             // probably unreachable
                             throw new SNBTSyntaxException("Unexpected tag type: " + type.name() + " @ " + posString());
@@ -175,14 +169,14 @@ final class SNBTParser {
         };
     }
 
-    private CompoundTag readCompound() {
-        CompoundTag tag = new CompoundTag();
+    private Tag readCompound() {
+        Map<String, Tag> tag = new LinkedHashMap<>();
 
         while (true) {
             char c = nextNS();
 
             if (c == '}') {
-                return tag;
+                return adaptor.ofCompound(tag);
             } else if (c == ',' || c == '\n') {
                 continue;
             }
@@ -197,14 +191,14 @@ final class SNBTParser {
             char n = nextNS();
             if (n == ':' || n == '=') {
                 Tag t = readTag(nextNS());
-                tag.addTag(key, t);
+                tag.put(key, t);
             } else {
                 throw new SNBTSyntaxException("Expected ':', got '" + n + "' @ " + posString());
             }
         }
     }
 
-    private ParentTag<?> readCollection() {
+    private Tag readCollection() {
         int prevPos = position;
         char type = nextNS();
         char semi = nextNS();
@@ -217,29 +211,29 @@ final class SNBTParser {
         }
     }
 
-    private ListTag<?> readList() {
-        ListTag<Tag> tag = new ListTag<>();
+    private Tag readList() {
+        List<Tag> tag = new LinkedList<>();
 
         while (true) {
             var prevPos = position;
             char c = nextNS();
 
             if (c == ']') {
-                return tag;
+                return adaptor.ofList(tag);
             } else if (c == ',') {
                 continue;
             }
 
             Tag t = readTag(c);
             try {
-                tag.addTag(t);
+                tag.add(t);
             } catch (IllegalArgumentException e) {
                 throw new SNBTSyntaxException("Unexpected tag '" + t + "' in list @ " + posString(prevPos) + " - can't mix two different tag types in a list!");
             }
         }
     }
 
-    private ArrayTag<?, ?, ?, ?> readArray(int pos, char type) {
+    private Tag readArray(int pos, char type) {
         List<Number> list = new ArrayList<>();
         type = Character.toLowerCase(type);
 
@@ -247,9 +241,9 @@ final class SNBTParser {
             char c = nextNS();
             if (c == ']') {
                 return switch (type) {
-                    case 'i' -> new IntArrayTag(list.stream().mapToInt(Number::intValue).toArray());
-                    case 'l' -> new LongArrayTag(list.stream().mapToLong(Number::longValue).toArray());
-                    case 'b' -> new ByteArrayTag(listToByteArray(list));
+                    case 'i' -> adaptor.ofArray(list.stream().mapToInt(Number::intValue).toArray());
+                    case 'l' -> adaptor.ofArray(list.stream().mapToLong(Number::longValue).toArray());
+                    case 'b' -> adaptor.ofArray(listToByteArray(list));
                     default -> throw new SNBTSyntaxException("Unknown array type: " + type + " @ " + posString(pos));
                 };
             } else if (c == ',') {
@@ -257,12 +251,9 @@ final class SNBTParser {
             }
 
             Tag tag = readTag(c);
-            if (tag instanceof IntTag intTag) {
-                list.add(intTag.getValue());
-            } else if (tag instanceof LongTag longTag) {
-                list.add(longTag.getValue());
-            } else if (tag instanceof ByteTag byteTag) {
-                list.add(byteTag.getValue());
+            Number n = adaptor.getNumberOf(tag);
+            if (n instanceof Integer || n instanceof Long || n instanceof Byte) {
+                list.add(n);
             } else {
                 throw new SNBTSyntaxException("Unexpected tag '" + tag + "' in list @ " + posString() + " - expected a numeric tag!");
             }
@@ -311,16 +302,21 @@ final class SNBTParser {
         }
     }
 
-    private Tag getNullTag() {
-        if (nullTag != null) return nullTag;
-        else throw new SNBTSyntaxException("Unexpected null tag @ " + posString());
-    }
-
     private static boolean isSimpleCharacter(char c) {
         return Character.isAlphabetic(c) || Character.isDigit(c) || c == '.' || c == '_' || c == '-' || c == '+' || c == '∞';
     }
 
-    private static TagType<? extends Tag> getNumberType(String s, char last) {
+    private enum TagType {
+        STRING,
+        INT,
+        BYTE,
+        SHORT,
+        LONG,
+        FLOAT,
+        DOUBLE,
+    }
+
+    private static TagType getNumberType(String s, char last) {
         if (s.isEmpty()) {
             return TagType.STRING;
         }

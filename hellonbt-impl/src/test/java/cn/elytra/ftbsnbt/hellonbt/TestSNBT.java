@@ -6,7 +6,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package cn.elytra.ftbsnbt;
+package cn.elytra.ftbsnbt.hellonbt;
 
 import org.glavo.nbt.tag.*;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class TestSNBT {
         try (InputStream inputStream = TestSNBT.class.getResourceAsStream("/test_snbt.snbt")) {
             assertNotNull(inputStream);
 
-            CompoundTag tag = SNBT.readLines(new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().toList());
+            CompoundTag tag = assertInstanceOf(CompoundTag.class, HelloSNBT.readLines(new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().toList()));
 
             assertEquals("value", tag.getString("test_string"), "getString");
             assertEquals(1, tag.getByte("testBool"), "getBoolean(getByte)");
