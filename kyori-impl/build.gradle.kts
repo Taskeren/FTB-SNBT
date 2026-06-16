@@ -9,27 +9,25 @@ repositories {
 
 dependencies {
     api(projects.core)
-    api(libs.hellonbt)
+    api(libs.adventure.nbt)
     implementation(libs.jspecify)
-
-    testImplementation(platform("org.junit:junit-bom:6.1.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
 }
 
 tasks.withType<JavaCompile> {
-    options.release.set(17)
+    options.release.set(21)
     options.javaModuleVersion.set(project.version.toString())
 }
 
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            artifactId = "ftb-snbt-hellosnbt"
+            artifactId = "ftb-snbt-kyori"
             version = project.version.toString()
             from(components["java"])
         }

@@ -1,0 +1,10 @@
+[versions]
+
+[libraries]
+guava = { module = "com.google.guava:guava", version = "33.6.0-jre" }
+jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
+hellonbt = { module = "org.glavo:HelloNBT", version = "0.3.0" }
+adventure-nbt = { module = "net.kyori:adventure-nbt", version = "5.1.1" }
+
+[plugins]
+gitVersion = { id = "com.palantir.git-version", version = "5.0.0" }

@@ -8,13 +8,19 @@ repositories {
 }
 
 dependencies {
-    implementation("com.google.guava:guava:33.6.0-jre")
-    implementation("org.jspecify:jspecify:1.0.0")
+    implementation(libs.guava)
+    implementation(libs.jspecify)
 }
 
 tasks.withType<JavaCompile> {
     options.release.set(17)
     options.javaModuleVersion.set(project.version.toString())
+}
+
+tasks.withType<Jar> {
+    from(project.file("LICENSE.md")) {
+        into("META-INF")
+    }
 }
 
 publishing {
