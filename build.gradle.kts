@@ -1,7 +1,7 @@
 import groovy.lang.Closure
 
 plugins {
-    id("com.palantir.git-version") version "5.0.0"
+    alias(libs.plugins.gitVersion)
 }
 
 group = "com.github.taskeren.ftb-snbt"
